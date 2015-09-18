@@ -2,18 +2,22 @@ require 'time'
 require 'date'
 
 class OccupancyCalculator
-  attr_accessor :time_period, :bookings, :days_in_month
+  attr_accessor :time_period, :bookings, :days_in_month, :unavailable_periods
 
   # args:
-  #   time_period should be a time object that represents the month we are
+  #   time_period - should be a time object that represents the month we are
   #   calculating the average occupancy for
 
-  #   bookings should be an array of hashes, each with start and end keys, the
+  #   bookings - should be an array of hashes, each with start and end keys, the
   #   values of which should be Time objects
-  def initialize(time_period, bookings)
-    self.time_period   = time_period
-    self.bookings      = bookings
-    self.days_in_month = Date.new(time_period.year, time_period.month, -1).day
+
+  #   unavailable_periods - exact same format as bookings, but representing periods of time
+  #   during which the property is unavailable, defaults to empty array
+  def initialize(time_period, bookings, unavailable_periods = [])
+    self.time_period         = time_period
+    self.bookings            = bookings
+    self.days_in_month       = Date.new(time_period.year, time_period.month, -1).day
+    self.unavailable_periods = unavailable_periods
   end
 
   # compile all information, returns hash
@@ -25,18 +29,38 @@ class OccupancyCalculator
     }
   end
 
+  # calculates available days in time period, returns integer
+  def available_days
+    days_in_month - unavailable_days
+  end
+
+  # calculates available nights in time period, returns integer
+  def available_nights
+    days_in_month - unavailable_nights
+  end
+
+  # calculates unavailable days in time period, returns integer
+  def unavailable_days
+    unavailable_periods.inject(0, &method(:accumulate_days))
+  end
+
+  # calculates unavailable nights in time period, returns integer
+  def unavailable_nights
+    unavailable_periods.inject(0, &method(:accumulate_nights))
+  end
+
   # calculates occupancy percentage for time period, returns integer from 0 to 100
   def calculate_days_occupied_percent
-    ((num_occupied_days.to_f / days_in_month) * 100).round
+    ((num_occupied_days.to_f / available_days) * 100).round
   end
 
   # calculates number of nights available during the time period, returns integer
   def calculate_nights_available
-    days_in_month - calculate_nights_occupied
+    available_nights - calculate_nights_occupied
   end
 
   def nights_available_fractional
-    "#{calculate_nights_available}/#{days_in_month}"
+    "#{calculate_nights_available}/#{available_nights}#{extra_fractional_info}"
   end
 
   # calculates number of nights occupied during the time period, returns integer
@@ -46,7 +70,7 @@ class OccupancyCalculator
 
   # fractional representation of nights occupied vs days in month, returns string
   def nights_occupied_fractional
-    "#{calculate_nights_occupied}/#{days_in_month}"
+    "#{calculate_nights_occupied}/#{available_nights}#{extra_fractional_info}"
   end
 
   # number of days of occupation for the time period from bookings, returns integer
@@ -80,6 +104,10 @@ class OccupancyCalculator
 
   def accumulate_nights(acc, booking)
     acc + count_relevant_nights_from(booking)
+  end
+
+  def extra_fractional_info
+    days_in_month != available_nights ? " (of #{days_in_month})" : ''
   end
 
   # Default return value for #count_relevant_from

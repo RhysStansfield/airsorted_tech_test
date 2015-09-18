@@ -70,7 +70,14 @@ class OccupancyCalculatorTest < Minitest::Test
 
   def test_nights_occupied_fractional
     occupancy_calc = _test_data_1.last
+
     assert_equal '5/30', occupancy_calc.nights_occupied_fractional
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal '5/26 (of 30)', occupancy_calc.nights_occupied_fractional
   end
 
   def test_calculate_nights_available
@@ -80,7 +87,14 @@ class OccupancyCalculatorTest < Minitest::Test
 
   def test_nights_available_fractional
     occupancy_calc = _test_data_1.last
+
     assert_equal '25/30', occupancy_calc.nights_available_fractional
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal '21/26 (of 30)', occupancy_calc.nights_available_fractional
   end
 
   def test_result
@@ -92,6 +106,54 @@ class OccupancyCalculatorTest < Minitest::Test
     }
 
     assert_equal expected_result, occupancy_calc.result
+  end
+
+  def test_available_days
+    occupancy_calc = _test_data_1.last
+
+    assert_equal 30, occupancy_calc.available_days
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal 25, occupancy_calc.available_days
+  end
+
+  def test_unavailable_days
+    occupancy_calc = _test_data_1.last
+
+    assert_equal 0, occupancy_calc.unavailable_days
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal 5, occupancy_calc.unavailable_days
+  end
+
+  def test_available_nights
+    occupancy_calc = _test_data_1.last
+
+    assert_equal 30, occupancy_calc.available_nights
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal 26, occupancy_calc.available_nights
+  end
+
+  def test_unavailable_nights
+    occupancy_calc = _test_data_1.last
+
+    assert_equal 0, occupancy_calc.unavailable_nights
+
+    occupancy_calc.unavailable_periods << {
+      start: Time.new(2015, 6, 1), end: Time.new(2015, 6, 5)
+    }
+
+    assert_equal 4, occupancy_calc.unavailable_nights
   end
 
   private
